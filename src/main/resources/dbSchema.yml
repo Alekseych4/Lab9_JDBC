@@ -1,0 +1,2 @@
+bookLocation: create table if not exists book_location (id int not null auto_increment primary key, floor int, bookcase int, shelf int);
+bookInfo: create table if not exists book_info (id int not null auto_increment primary key, author_name varchar(255), author_surname varchar(255), author_patronymic varchar(255), edition varchar(255), publishing_house varchar(255), publishing_year varchar(50), pages int, written_year varchar(50), weight double);

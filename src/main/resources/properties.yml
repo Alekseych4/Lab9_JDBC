@@ -1,0 +1,5 @@
+database:
+  driverName: mysql
+  url: jdbc:mysql://localhost:3306/jdbcTest?createDatabaseIfNotExist=true&useUnicode=true&serverTimezone=UTC
+  user: mysql
+  password: mysql
