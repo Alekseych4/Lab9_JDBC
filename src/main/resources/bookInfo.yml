@@ -1,0 +1,14 @@
+bookInfoTableName: book_info
+id: Id
+surname: Surname
+name: Name
+patronymic: Patronymic
+edition: Edition
+publishingHouse: Publishing house
+publishingYear: Publishing year
+pages: Pages
+writtenYear: Written year
+weight: Weight, gr
+insertQuery: INSERT INTO book_info (author_name, author_surname, author_patronymic, edition, publishing_house, publishing_year, pages, written_year, weight) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
+selectAllQuery: SELECT * FROM book_info;
+updateQuery: UPDATE book_info SET author_name=?, author_surname=?, author_patronymic=?, edition=?, publishing_house=?, publishing_year=?, pages=?, written_year=?, weight=? WHERE id=?;
