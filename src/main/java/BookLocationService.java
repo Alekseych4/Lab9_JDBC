@@ -93,4 +93,15 @@ public class BookLocationService {
 
         return columns;
     }
+
+    public boolean delete(long id) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(properties.getProperty("deleteQuery"))){
+            preparedStatement.setLong(1, id);
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
 }

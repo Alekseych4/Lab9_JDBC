@@ -6,3 +6,4 @@ shelf: Shelf
 insertQuery: INSERT INTO book_location (floor, bookcase, shelf) VALUES(?, ?, ?);
 selectAllQuery: SELECT * FROM book_location;
 updateQuery: UPDATE book_location SET floor=?, bookcase=?, shelf=? WHERE id=?;
+deleteQuery: DELETE FROM book_location WHERE id=?;

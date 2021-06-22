@@ -12,3 +12,4 @@ weight: Weight, gr
 insertQuery: INSERT INTO book_info (author_name, author_surname, author_patronymic, edition, publishing_house, publishing_year, pages, written_year, weight) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
 selectAllQuery: SELECT * FROM book_info;
 updateQuery: UPDATE book_info SET author_name=?, author_surname=?, author_patronymic=?, edition=?, publishing_house=?, publishing_year=?, pages=?, written_year=?, weight=? WHERE id=?;
+deleteQuery: DELETE FROM book_info WHERE id=?;
