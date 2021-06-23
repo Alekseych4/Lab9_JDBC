@@ -7,7 +7,7 @@ import java.util.*;
 
 public class BookInfoService {
     private final ConnectionResolver connectionResolver;
-    private final Connection connection;
+    private Connection connection;
     private final Properties properties;
 
     public BookInfoService() {
@@ -26,6 +26,7 @@ public class BookInfoService {
     }
 
     public boolean create(BookInfoEntity bookInfo){
+        checkConnection();
         try (PreparedStatement preparedCreate = connection.prepareStatement(properties.getProperty("insertQuery"))){
 
             preparedCreate.setString(1, bookInfo.getAuthorName());
@@ -37,6 +38,7 @@ public class BookInfoService {
             preparedCreate.setInt(7, bookInfo.getPages());
             preparedCreate.setString(8, bookInfo.getWrittenYear());
             preparedCreate.setDouble(9, bookInfo.getWeight());
+            preparedCreate.setInt(10, bookInfo.getLocationId());
 
             preparedCreate.execute();
 
@@ -49,6 +51,7 @@ public class BookInfoService {
     }
 
     public Vector<Vector<String>> getAll(){
+        checkConnection();
         try (Statement statement = connection.createStatement()) {
 
             if (statement.execute(properties.getProperty("selectAllQuery"))) {
@@ -69,6 +72,7 @@ public class BookInfoService {
                     bInfo.add(String.valueOf(rs.getInt(8)));
                     bInfo.add(rs.getString(9));
                     bInfo.add(String.valueOf(rs.getDouble(10)));
+                    bInfo.add(String.valueOf(rs.getInt(11)));
 
                     books.add(bInfo);
                 }
@@ -82,7 +86,94 @@ public class BookInfoService {
         return null;
     }
 
+    public Vector<Vector<String>> getSortedSurnames () {
+        checkConnection();
+        try (Statement statement = connection.createStatement()){
+            if (statement.execute(properties.getProperty("selectQuery"))) {
+                ResultSet rs = statement.getResultSet();
+                Vector<Vector<String>> surnames = new Vector<>();
+
+                while (rs.next()) {
+                    Vector<String> surname = new Vector<>();
+                    surname.add(rs.getString(1));
+                    surnames.add(surname);
+                }
+
+                return surnames;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Vector<Vector<String>> getEditionByBookcase(int bookcase) {
+        if (bookcase == -1){
+            Vector<Vector<String>> eds = new Vector<>();
+            eds.add(new Vector<>());
+            return eds;
+        }
+        checkConnection();
+        try (PreparedStatement statement = connection.prepareStatement(properties.getProperty("selectByBookcase"))){
+
+            statement.setInt(1, bookcase);
+
+            if (statement.execute()){
+                Vector<Vector<String>> eds = new Vector<>();
+                ResultSet rs = statement.getResultSet();
+                eds.add(new Vector<>());
+
+                while (rs.next()){
+                    Vector<String> ed = new Vector<>();
+                    ed.add(rs.getString(1));
+                    eds.add(ed);
+                }
+                return eds;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Vector<Vector<String>> getPagesByFullName(String name, String surname, String patronymic, boolean empty){
+        if (empty){
+            Vector<Vector<String>> eds = new Vector<>();
+            eds.add(new Vector<>());
+            return eds;
+        }
+        checkConnection();
+        try (PreparedStatement statement = connection.prepareStatement(properties.getProperty("selectPages"))){
+            statement.setString(1, name);
+            statement.setString(2, surname);
+            statement.setString(3, patronymic);
+
+            if (statement.execute()){
+                Vector<Vector<String>> eds = new Vector<>();
+                ResultSet rs = statement.getResultSet();
+                eds.add(new Vector<>());
+                int count = 0;
+
+                while (rs.next()){
+                    count += Integer.parseInt(rs.getString(1));
+                }
+                Vector<String> ed = new Vector<>();
+                ed.add(String.valueOf(count));
+                ed.add("");
+                ed.add("");
+                eds.add(ed);
+
+                return eds;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     public boolean update(BookInfoEntity bookInfo){
+        checkConnection();
         try (PreparedStatement preparedUpdate = connection.prepareStatement(properties.getProperty("updateQuery"))){
             preparedUpdate.setString(1, bookInfo.getAuthorName());
             preparedUpdate.setString(2, bookInfo.getAuthorSurname());
@@ -93,7 +184,22 @@ public class BookInfoService {
             preparedUpdate.setInt(7, bookInfo.getPages());
             preparedUpdate.setString(8, bookInfo.getWrittenYear());
             preparedUpdate.setDouble(9, bookInfo.getWeight());
-            preparedUpdate.setLong(10, bookInfo.getId());
+            preparedUpdate.setInt(10, bookInfo.getLocationId());
+            preparedUpdate.setLong(11, bookInfo.getId());
+
+            preparedUpdate.execute();
+        } catch (SQLException e){
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean updateStatic(BookInfoEntity bookInfo){
+        checkConnection();
+        try (PreparedStatement preparedUpdate = connection.prepareStatement(properties.getProperty("updateStaticQuery"))){
+            preparedUpdate.setLong(1, bookInfo.getId());
 
             preparedUpdate.execute();
         } catch (SQLException e){
@@ -106,17 +212,38 @@ public class BookInfoService {
 
     public Vector<String> getColumnNames(){
         Vector<String> columns = new Vector<>(10);
-        columns.add(properties.getProperty("id"));
-        columns.add(properties.getProperty("name"));
-        columns.add(properties.getProperty("surname"));
-        columns.add(properties.getProperty("patronymic"));
-        columns.add(properties.getProperty("edition"));
-        columns.add(properties.getProperty("publishingHouse"));
-        columns.add(properties.getProperty("publishingYear"));
-        columns.add(properties.getProperty("pages"));
-        columns.add(properties.getProperty("writtenYear"));
-        columns.add(properties.getProperty("weight"));
+        columns.add("id");
+        columns.add("Имя");
+        columns.add("Фамилия");
+        columns.add("Отчество");
+        columns.add("Издание");
+        columns.add("Издательский дом");
+        columns.add("Год издания");
+        columns.add("Кол-во страниц");
+        columns.add("Год написания");
+        columns.add("Вес, гр");
+        columns.add("id места");
 
+        return columns;
+    }
+
+    public Vector<String> getSurnameColumn(){
+        Vector<String> columns = new Vector<>();
+        columns.add("Фамилия");
+        return columns;
+    }
+
+    public Vector<String> getEditionColumn(){
+        Vector<String> columns = new Vector<>();
+        columns.add("Издание");
+        return columns;
+    }
+
+    public Vector<String> getPagesColumn(){
+        Vector<String> columns = new Vector<>();
+        columns.add("Имя/Страницы");
+        columns.add("Фамилия");
+        columns.add("Отчество");
         return columns;
     }
 
@@ -129,5 +256,15 @@ public class BookInfoService {
             return false;
         }
         return true;
+    }
+
+    private void checkConnection(){
+        try {
+            if (connection.isClosed()) {
+                connection = connectionResolver.getConnection();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

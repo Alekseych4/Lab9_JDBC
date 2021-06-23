@@ -46,6 +46,7 @@ public class BookLocationService {
             preparedStatement.setInt(1, bookLocationEntity.getFloor());
             preparedStatement.setInt(2, bookLocationEntity.getBookcase());
             preparedStatement.setInt(3, bookLocationEntity.getShelf());
+            preparedStatement.setLong(4, bookLocationEntity.getId());
 
             preparedStatement.execute();
         } catch (SQLException throwables) {
@@ -86,10 +87,10 @@ public class BookLocationService {
 
     public Vector<String> getColumnNames(){
         Vector<String> columns = new Vector<>(4);
-        columns.add(properties.getProperty("id"));
-        columns.add(properties.getProperty("floor"));
-        columns.add(properties.getProperty("bookcase"));
-        columns.add(properties.getProperty("shelf"));
+        columns.add("id");
+        columns.add("Этаж");
+        columns.add("Шкаф");
+        columns.add("Полка");
 
         return columns;
     }

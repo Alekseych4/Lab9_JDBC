@@ -1,9 +1,10 @@
+
 import entity.BookInfoEntity;
 import entity.BookLocationEntity;
 
 import javax.swing.*;
+import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+import java.util.Vector;
 
 public class StartGUI {
     private JFrame mainFrame;
@@ -20,6 +22,8 @@ public class StartGUI {
     private JButton deleteBtn;
     private JButton addBtn;
     private JButton updateBtn;
+    private JButton editionsBtn;
+    private JButton authorBtn;
 
     public StartGUI() {
         bookInfoService = new BookInfoService();
@@ -35,11 +39,15 @@ public class StartGUI {
         deleteBtn = new JButton("Удалить строку");
         updateBtn = new JButton("Обновить строку");
         addBtn = new JButton("Добавить строку");
+        editionsBtn = new JButton("Выдать издания в шкафу");
+        authorBtn = new JButton("Всего страниц у автора");
 //        mainFrame.add(jButton);
 //        mainFrame.add(setUpTabs());
         mainFrame.getContentPane().add(deleteBtn);
         mainFrame.getContentPane().add(addBtn);
         mainFrame.getContentPane().add(updateBtn);
+        mainFrame.getContentPane().add(editionsBtn);
+        mainFrame.getContentPane().add(authorBtn);
         mainFrame.getContentPane().add(setUpTabs());
 
 //        mainFrame.setContentPane(panel);
@@ -58,6 +66,13 @@ public class StartGUI {
 
         try (Connection connection = connectionResolver.getConnection();
              InputStream inputStream = connectionResolver.getSchemaFile()){
+
+//            Statement drop = connection.createStatement();
+//            drop.execute("DROP TABLE book_location");
+//
+//            Statement drop2 = connection.createStatement();
+//            drop2.execute("DROP TABLE book_info");
+
             Properties properties = new Properties();
             properties.load(inputStream);
             System.out.println(properties.getProperty("bookLocation"));
@@ -82,12 +97,27 @@ public class StartGUI {
     private JTabbedPane setUpTabs() {
         JTabbedPane jTabbedPane = new JTabbedPane();
 
-        JTable bookLocationTable = new JTable(bookLocationService.getAll(), bookLocationService.getColumnNames());
-        bookLocationTable.getModel().addTableModelListener(bookLocationTableListener());
+        JTable bookLocationTable = new JTable(new CustomTableModel(bookLocationService.getAll(), bookLocationService.getColumnNames()));
+//        bookLocationTable.getModel().addTableModelListener(bookLocationTableListener());
 
-        JTable bookInfoTable = new JTable(bookInfoService.getAll(), bookInfoService.getColumnNames());
-        bookInfoTable.getModel().addTableModelListener(bookInfoTableListener());
+        JTable bookInfoTable = new JTable(new CustomTableModel(bookInfoService.getAll(), bookInfoService.getColumnNames()));
+//        bookInfoTable.getModel().addTableModelListener(bookInfoTableListener());
 
+        JTable surnamesTable = new JTable(new CustomTableModel(bookInfoService.getSortedSurnames(), bookInfoService.getSurnameColumn()));
+
+        JTable bookcaseTable = new JTable(new CustomTableModel(bookInfoService.getEditionByBookcase(-1), bookInfoService.getEditionColumn())){
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return row == 0;
+            }
+        };
+
+        JTable pagesTable = new JTable(new CustomTableModel(bookInfoService.getPagesByFullName("", "", "", true), bookInfoService.getPagesColumn())){
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return row == 0;
+            }
+        };
 
         JScrollPane jScrollPane = new JScrollPane(bookLocationTable);
         bookLocationTable.setFillsViewportHeight(false);
@@ -95,19 +125,35 @@ public class StartGUI {
         JScrollPane jScrollPane1 = new JScrollPane(bookInfoTable);
         bookLocationTable.setFillsViewportHeight(false);
 
+        JScrollPane jScrollPane2 = new JScrollPane(surnamesTable);
+        surnamesTable.setFillsViewportHeight(false);
+
+        JScrollPane jScrollPane3 = new JScrollPane(bookcaseTable);
+        bookcaseTable.setFillsViewportHeight(false);
+
+        JScrollPane jScrollPane4 = new JScrollPane(pagesTable);
+        pagesTable.setFillsViewportHeight(false);
+
         jTabbedPane.addTab("Место книги", jScrollPane);
         jTabbedPane.addTab("Информация о книге", jScrollPane1);
+        jTabbedPane.addTab("Фамилии", jScrollPane2);
+        jTabbedPane.addTab("Ввести шкаф", jScrollPane3);
+        jTabbedPane.addTab("Страницы автора", jScrollPane4);
 
         addBtn.addActionListener(l -> {
             switch (jTabbedPane.getSelectedIndex()){
                 case 0:
-                    BookLocationEntity blEntity = retrieveLocationTableData(bookLocationTable.getModel());
-                    boolean f = bookLocationService.create(blEntity);
-                    System.out.println(f);
+                    BookLocationEntity blEntity = retrieveLocationData(bookLocationTable.getModel(), 0, false);
+                    if (bookLocationService.create(blEntity)){
+                        refreshTableData(bookLocationTable, bookLocationService.getAll());
+                    }
+
                     break;
                 case 1:
-                    BookInfoEntity biEntity = retrieveInfoTableData(bookInfoTable.getModel());
-                    bookInfoService.create(biEntity);
+                    BookInfoEntity biEntity = retrieveInfoData(bookInfoTable.getModel(), 0, false);
+                    if (bookInfoService.create(biEntity)) {
+                        refreshTableData(bookInfoTable, bookInfoService.getAll());
+                    }
                     break;
                 case -1:
                     break;
@@ -118,17 +164,17 @@ public class StartGUI {
             switch (jTabbedPane.getSelectedIndex()){
                 case 0:
                     for (int row : bookLocationTable.getSelectedRows()) {
-                        if (bookLocationService.delete(Long.parseLong((String) bookInfoTable.getValueAt(row, 0)))){
-                            ((DefaultTableModel) bookLocationTable.getModel()).removeRow(row);
-                        }
+                        if (row != 0)
+                            bookLocationService.delete(Long.parseLong((String) bookLocationTable.getValueAt(row, 0)));
                     }
+                    refreshTableData(bookLocationTable, bookLocationService.getAll());
                     break;
                 case 1:
                     for (int row : bookInfoTable.getSelectedRows()) {
-                        if (bookInfoService.delete(Long.parseLong((String) bookInfoTable.getValueAt(row, 0)))){
-                            ((DefaultTableModel) bookInfoTable.getModel()).removeRow(row);
-                        }
+                        if (row != 0)
+                            bookInfoService.delete(Long.parseLong((String) bookInfoTable.getValueAt(row, 0)));
                     }
+                    refreshTableData(bookInfoTable, bookInfoService.getAll());
                     break;
             }
         });
@@ -136,25 +182,50 @@ public class StartGUI {
         updateBtn.addActionListener(l -> {
             switch (jTabbedPane.getSelectedIndex()){
                 case 0:
-                    BookLocationEntity blEntity = retrieveLocationTableData(bookLocationTable.getModel());
-                    boolean f = bookLocationService.update(blEntity);
+                    BookLocationEntity blEntity = retrieveLocationData(bookLocationTable.getModel(), bookLocationTable.getSelectedRow(), true);
+                    if (bookLocationService.update(blEntity)) {
+                        refreshTableData(bookLocationTable, bookLocationService.getAll());
+                    }
                     break;
                 case 1:
-                    BookInfoEntity biEntity = retrieveInfoTableData(bookInfoTable.getModel());
-                    bookInfoService.update(biEntity);
+                    BookInfoEntity biEntity = retrieveInfoData(bookInfoTable.getModel(), bookInfoTable.getSelectedRow(), true);
+                    if (bookInfoService.update(biEntity)) {
+                        refreshTableData(bookInfoTable, bookInfoService.getAll());
+                    }
+                    break;
+            }
+        });
+
+        editionsBtn.addActionListener(l -> {
+            switch (jTabbedPane.getSelectedIndex()){
+                case 3:
+                    CustomTableModel model = (CustomTableModel) bookcaseTable.getModel();
+                    String bookcase = getNonNullString(model.getValueAt(0, 0));
+                    refreshTableData(bookcaseTable, bookInfoService.getEditionByBookcase(Integer.parseInt(bookcase)));
+                    break;
+            }
+        });
+
+        authorBtn.addActionListener(l -> {
+            switch (jTabbedPane.getSelectedIndex()){
+                case 4:
+                    CustomTableModel model = (CustomTableModel) pagesTable.getModel();
+                    String name = getNonNullString(model.getValueAt(0, 0));
+                    String surname = getNonNullString(model.getValueAt(0, 1));
+                    String p = getNonNullString(model.getValueAt(0, 2));
+                    refreshTableData(pagesTable, bookInfoService.getPagesByFullName(name, surname, p, false));
                     break;
             }
         });
 
         jTabbedPane.addChangeListener(e -> {
-            JTabbedPane jTabbedPane1 = (JTabbedPane) e.getSource();
-            switch (jTabbedPane1.getSelectedIndex()){
+            switch (jTabbedPane.getSelectedIndex()){
                 case 0:
-
                     break;
                 case 1:
                     break;
-                case -1:
+                case 2:
+                    refreshTableData(surnamesTable, bookInfoService.getSortedSurnames());
                     break;
             }
         });
@@ -162,42 +233,71 @@ public class StartGUI {
         return jTabbedPane;
     }
 
-    private BookLocationEntity retrieveLocationTableData(TableModel bookLocationModel){
+    private BookLocationEntity retrieveLocationData(TableModel bookLocationModel, int row, boolean updateFlag){
         BookLocationEntity blEntity = new BookLocationEntity();
-        blEntity.setFloor(Integer.parseInt((String) bookLocationModel.getValueAt(0, 1)));
-        blEntity.setBookcase(Integer.parseInt((String) bookLocationModel.getValueAt(0, 2)));
-        blEntity.setShelf(Integer.parseInt((String) bookLocationModel.getValueAt(0, 3)));
+
+        if (updateFlag)
+            blEntity.setId(Long.parseLong(getNonNullString(bookLocationModel.getValueAt(row, 0))));
+        blEntity.setFloor(Integer.parseInt(getNonNullString(bookLocationModel.getValueAt(row, 1))));
+        blEntity.setBookcase(Integer.parseInt(getNonNullString(bookLocationModel.getValueAt(row, 2))));
+        blEntity.setShelf(Integer.parseInt(getNonNullString(bookLocationModel.getValueAt(row, 3))));
 
         return blEntity;
     }
 
-    private BookInfoEntity retrieveInfoTableData(TableModel bookInfoModel){
+    private BookInfoEntity retrieveInfoData(TableModel bookInfoModel, int row, boolean updateFlag){
         BookInfoEntity biEntity = new BookInfoEntity();
-        biEntity.setAuthorName((String) bookInfoModel.getValueAt(0, 1));
-        biEntity.setAuthorSurname((String) bookInfoModel.getValueAt(0, 2));
-        biEntity.setAuthorPatronymic((String) bookInfoModel.getValueAt(0, 3));
-        biEntity.setEdition((String) bookInfoModel.getValueAt(0, 4));
-        biEntity.setPublishingHouse((String) bookInfoModel.getValueAt(0, 5));
-        biEntity.setPublishingYear((String) bookInfoModel.getValueAt(0, 6));
-        biEntity.setPages(Integer.parseInt((String) bookInfoModel.getValueAt(0, 7)));
-        biEntity.setWrittenYear((String) bookInfoModel.getValueAt(0, 8));
-        biEntity.setWeight(Double.parseDouble((String) bookInfoModel.getValueAt(0, 9)));
+
+        if (updateFlag)
+            biEntity.setId(Long.parseLong(getNonNullString(bookInfoModel.getValueAt(row, 0))));
+        biEntity.setAuthorName(getNonNullString(bookInfoModel.getValueAt(row, 1)));
+        biEntity.setAuthorSurname(getNonNullString(bookInfoModel.getValueAt(row, 2)));
+        biEntity.setAuthorPatronymic(getNonNullString(bookInfoModel.getValueAt(row, 3)));
+        biEntity.setEdition(getNonNullString(bookInfoModel.getValueAt(row, 4)));
+        biEntity.setPublishingHouse(getNonNullString(bookInfoModel.getValueAt(row, 5)));
+        biEntity.setPublishingYear(getNonNullString(bookInfoModel.getValueAt(row, 6)));
+        biEntity.setPages(Integer.parseInt(getNonNullString(bookInfoModel.getValueAt(row, 7))));
+        biEntity.setWrittenYear(getNonNullString(bookInfoModel.getValueAt(row, 8)));
+        biEntity.setWeight(Double.parseDouble(getNonNullString(bookInfoModel.getValueAt(row, 9))));
+        biEntity.setLocationId(Integer.parseInt(getNonNullString(bookInfoModel.getValueAt(row, 10))));
 
         return biEntity;
+    }
+
+    private String getNonNullString(Object cellValue) {
+        String c = (String) cellValue;
+        if (c == null || c.isEmpty()){
+            throw new RuntimeException("Не определено поле");
+        }
+
+        return c;
+    }
+
+    private void refreshTableData(JTable jTable, Vector<Vector<String>> rows){
+        CustomTableModel model = (CustomTableModel) jTable.getModel();
+        for (int i = jTable.getRowCount() - 1; i >= 0; i--) {
+            model.removeRow(i);
+        }
+
+        for (Vector<String> row : rows) {
+            model.addRow(row);
+        }
     }
 
     private TableModelListener bookInfoTableListener(){
         return e -> {
             int row = e.getType();
             int column = e.getColumn();
-            TableModel model = (TableModel)e.getSource();
+            CustomTableModel model = (CustomTableModel) e.getSource();
+
             String columnName = model.getColumnName(column);
             Object data = model.getValueAt(row, column);
         };
     }
 
-    private TableModelListener bookLocationTableListener(){
+    private TableModelListener bookcaseTableListener(){
         return e -> {
+
 
         };
     }

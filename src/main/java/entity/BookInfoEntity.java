@@ -11,12 +11,13 @@ public class BookInfoEntity {
     private int pages;
     private String writtenYear;
     private double weight;
+    private int locationId;
 
     public BookInfoEntity() {
     }
 
     public BookInfoEntity(long id, String authorName, String authorSurname, String authorPatronymic, String edition,
-                          String publishingHouse, String publishingYear, int pages, String writtenYear, double weight) {
+                          String publishingHouse, String publishingYear, int pages, String writtenYear, double weight, int locationId) {
         this.id = id;
         this.authorName = authorName;
         this.authorSurname = authorSurname;
@@ -107,5 +108,13 @@ public class BookInfoEntity {
 
     public void setWeight(double weight) {
         this.weight = weight;
+    }
+
+    public void setLocationId(int locationId){
+        this.locationId = locationId;
+    }
+
+    public int getLocationId() {
+        return locationId;
     }
 }

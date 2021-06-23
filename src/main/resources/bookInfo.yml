@@ -9,7 +9,11 @@ publishingYear: Publishing year
 pages: Pages
 writtenYear: Written year
 weight: Weight, gr
-insertQuery: INSERT INTO book_info (author_name, author_surname, author_patronymic, edition, publishing_house, publishing_year, pages, written_year, weight) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
+insertQuery: INSERT INTO book_info (author_name, author_surname, author_patronymic, edition, publishing_house, publishing_year, pages, written_year, weight, book_location_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 selectAllQuery: SELECT * FROM book_info;
-updateQuery: UPDATE book_info SET author_name=?, author_surname=?, author_patronymic=?, edition=?, publishing_house=?, publishing_year=?, pages=?, written_year=?, weight=? WHERE id=?;
+updateQuery: UPDATE book_info SET author_name=?, author_surname=?, author_patronymic=?, edition=?, publishing_house=?, publishing_year=?, pages=?, written_year=?, weight=?, book_location_id=? WHERE id=?;
+updateStaticQuery: UPDATE book_info SET author_name=test, author_surname=test, author_patronymic=test, edition=test, publishing_house=test, publishing_year=test, pages=6, written_year=test, weight=100.0 WHERE id=?;
 deleteQuery: DELETE FROM book_info WHERE id=?;
+selectQuery: SELECT author_surname FROM book_info ORDER BY author_surname;
+selectByBookcase: SELECT edition FROM `book_info` WHERE book_location_id=(SELECT book_location.id FROM book_location WHERE book_location.bookcase = ?) ORDER By edition;
+selectPages: SELECT pages FROM `book_info` WHERE author_name=? AND author_surname=? AND author_patronymic=?;
